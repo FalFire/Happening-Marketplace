@@ -162,5 +162,11 @@ exports.client_reserveOffer = (offer, reserve) !->
 ###
 exports.client_deleteOffer = (offer) !->
     o = Db.shared.get 'offers', offer
-    if Plugin.userId() == o.user || Plugin.userIsAdmin()
+    if Plugin.userId() == o.user
+        Db.shared.remove 'offers', offer
+    else if Plugin.userIsAdmin()
+        Event.create
+            unit: 'removedByAdmin'
+            text: "An admin removed your offer #{o.title}"
+            include: o.user
         Db.shared.remove 'offers', offer
