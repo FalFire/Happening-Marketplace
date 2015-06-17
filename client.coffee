@@ -169,7 +169,7 @@ renderOffers = ->
 
     Dom.div !->
         Dom.style textAlign: 'center'
-        Dom.h3 "Current Offers:"
+        Dom.h3 "Current Offers"
 
     if parseInt(Db.shared.get 'maxOfferID') == -1
         Dom.section !->
@@ -197,6 +197,8 @@ renderOfferItem = (o) !->
         if typeof offerID == 'undefined'
             offerID = -1
         Dom.onTap !->
+            if o.get('user') != Plugin.userId()
+                Server.sync 'viewOffer', parseInt(offerID)
             Page.nav offer: parseInt(offerID)
         Dom.style width: '100%'
 
@@ -279,19 +281,24 @@ renderViewOffer = (id) !->
             Dom.h3 offer.title
             Dom.pre offer.description
             Dom.last().style fontFamily: "Roboto", marginBottom: '5px', marginTop: '7px'
+        if offer.images.length > 0
+            Dom.div !->
+                Dom.style overflowX: 'auto', minHeight: '120px', maxHeight: '120px'
+                for key in offer.images
+                    Dom.img !->
+                        Dom.style
+                            width: '120px'
+                            height: '120px'
+                            verticalAlign: 'middle'
+                            margin: '0px 5px'
+                        Dom.prop('src', Photo.url key)
+                        Dom.onTap !->
+                            Page.nav viewPicture: key
+
         Dom.div !->
-            Dom.style overflowX: 'auto', minHeight: '120px', maxHeight: '120px'
-            log JSON.stringify offer
-            for key in offer.images
-                Dom.img !->
-                    Dom.style
-                        width: '120px'
-                        height: '120px'
-                        verticalAlign: 'middle'
-                        margin: '0px 5px'
-                    Dom.prop('src', Photo.url key)
-                    Dom.onTap !->
-                        Page.nav viewPicture: key
+            Dom.style textAlign: 'right', fontStyle: 'italic', fontSize: '14px'
+            Dom.text "Views: #{offer.views||0}"
+
 
     # Bids information
     Dom.section !->
@@ -316,6 +323,11 @@ renderViewOffer = (id) !->
                 Dom.div !->
                     Dom.style fontWeight: 'bold', display: 'inline-block', verticalAlign: 'middle', lineHeight: '35px', float: 'right',
                     Dom.text "Highest bid: #{offer.highestBid} "
+                    if offer.hasOwnProperty('highestBidBy') && offer.highestBidBy != -1
+                        Ui.avatar Plugin.userAvatar(offer.highestBidBy),
+                            onTap: !->
+                                Plugin.userInfo(offer.highestBidBy)
+                        Dom.last().style verticalAlign: 'middle', marginLeft: '5px'
     Social.renderComments offer.id
 
 

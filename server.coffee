@@ -30,7 +30,9 @@ exports.client_newOffer = (o) !->
         reserved:       false
         bids:           []
         highestBid:     0
+        highestBidBy:   -1
         numBids:        0
+        views:          0
 
     # Add all submitted images to it and remove them from submitted array
     offer.images = []
@@ -46,6 +48,16 @@ exports.client_newOffer = (o) !->
         unit: 'offer'
         text: "New offer: #{offer.title}"
         exclude: [Plugin.userId()]
+
+###
+# Called when a user other than the offer 'owner' clicks on an offer
+# in the list of offers. This is regarded as one view.
+#
+# @param offerID The ID of the offer of which to increment the view count
+###
+exports.client_viewOffer = (offerID) !->
+    if Db.shared.get 'offers', offerID, 'user' != Plugin.userId()
+        Db.shared.modify 'offers', offerID, 'views', (v) -> (v||0)+1
 
 
 ###
@@ -84,6 +96,7 @@ exports.client_placeBid = (offerID, bid) !->
             newID = Db.shared.modify 'offers', offerID, 'numBids', (v) -> v+1
             Db.shared.set 'offers', offerID, 'bids', (newID-1), newBid
             Db.shared.set 'offers', offerID, 'highestBid', bid
+            Db.shared.set 'offers', offerID, 'highestBidBy', Plugin.userId()
 
             # Send events to all other bidders
             recipients = []
