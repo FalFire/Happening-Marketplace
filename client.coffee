@@ -91,7 +91,7 @@ renderOfferBids = (id) !->
                             Dom.text Plugin.userName(bid.get('user'))
 
                     # Allow owner of bid to remove it
-                    if bid.get('user') == Plugin.userId()
+                    if bid.get('user') == Plugin.userId() || Plugin.userId() == offer.user
                         Dom.div !->
                             Dom.style
                                 display: 'inline-block'
@@ -106,8 +106,12 @@ renderOfferBids = (id) !->
                                 height: '24px'
                                 width: '24px'
                             Dom.onTap !->
-                                Modal.confirm "Do you want to delete your bid?", !->
-                                    Server.sync 'deleteBid', id, bid.get('amount')
+                                if Plugin.userId() == offer.user
+                                    Modal.confirm "Do you want to delete this bid?", !->
+                                        Server.sync 'deleteBid', id, bid.get('amount')
+                                else
+                                    Modal.confirm "Do you want to delete your bid?", !->
+                                        Server.sync 'deleteBid', id, bid.get('amount')
                     Dom.span !->
                         Dom.style display: 'inline-block', float: 'right', verticalAlign: 'middle', lineHeight: '40px'
                         Dom.text bid.get('amount')

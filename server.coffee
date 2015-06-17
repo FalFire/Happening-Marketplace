@@ -126,7 +126,13 @@ exports.client_deleteBid = (offerID, amount) !->
     bids = offer.bids
     highestBid = 0
     for k,v of bids
-        if v.user == Plugin.userId() && parseInt(v.amount) == parseInt(amount)
+        if Plugin.userId() == offer.user && parseInt(v.amount) == parseInt(amount)
+            Db.shared.remove 'offers', offerID, 'bids', k
+            Event.create
+                unit: 'revokeOffer'
+                text: "#{Plugin.userName(offer.user)} deleted your offer of #{amount} for #{offer.title}"
+                include: [v.user]
+        else if v.user == Plugin.userId() && parseInt(v.amount) == parseInt(amount)
             Db.shared.remove 'offers', offerID, 'bids', k
             Event.create
                 unit: 'revokeOffer'
