@@ -63,7 +63,7 @@ renderOfferBids = (id) !->
                     Form.input
                         name: 'bid'
                         text: 'Bid'
-                        value: parseInt(highestBid+1)
+                        value: parseInt(highestBid)+1
                     Dom.last().style width: '60px', marginRight: '10px', display: 'inline-block'
                     Ui.button "Place bid", !->
                         bid = Form.values().bid
