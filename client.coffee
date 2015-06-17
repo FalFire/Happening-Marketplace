@@ -63,7 +63,7 @@ renderOfferBids = (id) !->
                     Form.input
                         name: 'bid'
                         text: 'Bid'
-                        value: highestBid
+                        value: parseInt(highestBid+1)
                     Dom.last().style width: '60px', marginRight: '10px', display: 'inline-block'
                     Ui.button "Place bid", !->
                         bid = Form.values().bid
@@ -180,7 +180,9 @@ renderOffers = ->
         Ui.list !->
             Db.shared.iterate 'offers', (offer) !->
                 Ui.item !->
-                    renderOfferItem(offer)
+                    # Combat some server-side bug that causes a weird object to be added to the database
+                    if typeof(offer.get('title')) != 'undefined'
+                        renderOfferItem(offer)
             , (offer) -> 1-parseInt(offer.get('date'))
 
 

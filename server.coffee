@@ -45,7 +45,7 @@ exports.client_newOffer = (o) !->
     Event.create
         unit: 'offer'
         text: "New offer: #{offer.title}"
-        include: [Plugin.userId()]
+        exclude: [Plugin.userId()]
 
 
 ###
@@ -107,21 +107,21 @@ exports.client_placeBid = (offerID, bid) !->
 # Deletes the bid for the given offer and of the given amount,
 # placed by the currently logged in user
 ###
-exports.client_deleteBid = (offer, amount) !->
-    bids = Db.shared.get 'offers', offer, 'bids'
-    offer = Db.shared.get 'offers', offer
+exports.client_deleteBid = (offerID, amount) !->
+    offer = Db.shared.get 'offers', offerID
+    bids = offer.bids
     highestBid = 0
     for k,v of bids
-        if v.user == Plugin.userId() && v.amount == amount
-            Db.shared.remove 'offers', offer, 'bids', k
+        if v.user == Plugin.userId() && parseInt(v.amount) == parseInt(amount)
+            Db.shared.remove 'offers', offerID, 'bids', k
             Event.create
                 unit: 'revokeOffer'
                 text: "Offer of #{amount} revoked for #{offer.title}"
                 include: [offer.user]
         else
-            if v.amount > highestBid
-                highestBid = v.amount
-    Db.shared.set 'offers', offer, 'highestBid', highestBid
+            if parseInt(v.amount) > parseInt(highestBid)
+                highestBid = parseInt(v.amount)
+    Db.shared.set 'offers', offerID, 'highestBid', highestBid
 
 
 ###
