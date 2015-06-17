@@ -94,13 +94,13 @@ exports.client_placeBid = (offerID, bid) !->
                         recipients.push(bidder)
             Event.create
                 unit: 'overbidden'
-                text: "#{Plugin.userName()} bid higher on #{offer.title}"
+                text: '#{Plugin.userName()} bid higher on "#{offer.title}"'
                 include: recipients
 
             # Send event to offer owner
             Event.create
                 unit: 'bid'
-                text: "New bid of #{bid} for #{offer.title}"
+                text: 'New bid of #{bid} for "#{offer.title}"'
                 include: [offer.user]
 
 ###
@@ -116,7 +116,7 @@ exports.client_deleteBid = (offerID, amount) !->
             Db.shared.remove 'offers', offerID, 'bids', k
             Event.create
                 unit: 'revokeOffer'
-                text: "Offer of #{amount} revoked for #{offer.title}"
+                text: 'Offer of #{amount} revoked for "#{offer.title}"'
                 include: [offer.user]
         else
             if parseInt(v.amount) > parseInt(highestBid)
@@ -131,6 +131,18 @@ exports.client_reserveOffer = (offer, reserve) !->
     o = Db.shared.get 'offers', offer
     if Plugin.userId() == o.user
         Db.shared.set 'offers', offer, 'reserved', reserve
+
+        # Send event to all bidders
+        if reserve
+            recipients = []
+            Db.shared.iterate 'offers', offer, 'bids', (b) !->
+                bidder = b.get('user')
+                if bidder not in recipients and bidder != Plugin.userId()
+                    recipients.push(bidder)
+            Event.create
+                unit: 'reserved'
+                text: '"#{offer.title}" has been reserved'
+                include: recipients
 
 ###
 # Deletes the given offer
