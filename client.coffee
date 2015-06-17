@@ -51,40 +51,27 @@ renderOfferBids = (id) !->
 
     # Allow bidding for all users except 'owner' of offer
     if Plugin.userId() != offer.user
-        Page.setFooter !->
+        Dom.section !->
             # If reserved, do not allow placing bids
             if offer.reserved
                 Dom.div !->
-                    Dom.style textAlign: 'center', background: '#fdfd96', borderTop: '1px solid #ccc', padding: '6px', fontWeight: 'bold'
+                    Dom.style fontWeight: 'bold', textAlign: 'center', background: '#FDFD96'
                     Dom.text "This offer is currently reserved"
             else
                 Dom.div !->
-                    Dom.style textAlign: 'center', background: 'white', borderTop: '1px solid #ccc'
+                    Dom.b "Place new bid: "
+                    Dom.style textAlign: 'center'
                     Form.input
                         name: 'bid'
                         text: 'Bid'
                         value: parseInt(highestBid)+1
-                    Dom.last().style width: '60px', marginRight: '10px', display: 'inline-block'
+                    Dom.last().style width: '60px', margin: '0px 10px', textAlign: 'center', display: 'inline-block', padding: '5px 4px'
                     Ui.button "Place bid", !->
                         bid = Form.values().bid
                         if parseInt(bid) <= highestBid || bid == ''
                             Modal.show "Place a bid higher than #{highestBid}!"
                         else
                             Server.sync 'placeBid', id, bid
-
-    # Allow owner of offer to reserve/'unreserve' the offer for someone
-    else
-        Page.setFooter !->
-            Dom.div !->
-                Dom.style textAlign: 'center', background: 'white', borderTop: '1px solid #ccc'
-                if Db.shared.get 'offers', id, 'reserved'
-                    Ui.button "Unreserve", !->
-                        Modal.confirm "Do you want to remove the reservation on this offer?", !->
-                            Server.sync "reserveOffer", id, false
-                else
-                    Ui.button "Reserve", !->
-                        Modal.confirm "Do you want to reserve this offer for a bidder?", !->
-                            Server.sync "reserveOffer", id, true
 
     # Render actual bids, if any
     if highestBid > 0
@@ -221,7 +208,7 @@ renderOfferItem = (o) !->
                 Dom.style float: 'right', verticalAlign: 'middle', color: 'orange', fontWeight: 'bold', lineHeight: '30px'
                 if typeof(pic) != 'undefined'
                     Dom.style lineHeight: '60px'
-                Dom.text 'reserved'
+                Dom.text 'Reserved'
             else
                 Dom.style float: 'right', verticalAlign: 'middle', lineHeight: '30px'
                 if typeof(pic) != 'undefined'
@@ -272,7 +259,7 @@ renderViewOffer = (id) !->
                 Dom.style display: 'inline-block', float: 'right', verticalAlign: 'middle', lineHeight: '40px'
                 if offer.reserved
                     Dom.style color: 'orange', fontWeight: 'bold'
-                    Dom.text 'reserved'
+                    Dom.text 'Reserved'
                 else
                     Dom.b "Price: "
                     Dom.text offer.price
@@ -307,6 +294,16 @@ renderViewOffer = (id) !->
             Dom.onTap !->
                 Page.nav offerBids: offer.id
             if Plugin.userId() == offer.user
+                Dom.div !->
+                    Dom.style verticalAlign: 'middle', lineHeight: '100%', display: 'inline-block', marginRight: '5px'
+                    if Db.shared.get 'offers', offer.id, 'reserved'
+                        Ui.button "Unreserve", !->
+                            Modal.confirm "Do you want to remove the reservation on this offer?", !->
+                                Server.sync "reserveOffer", id, false
+                    else
+                        Ui.button "Reserve", !->
+                            Modal.confirm "Do you want to reserve this offer for a bidder?", !->
+                                Server.sync "reserveOffer", id, true
                 Dom.div !->
                     Dom.style verticalAlign: 'middle', lineHeight: '100%', display: 'inline-block'
                     Ui.button "View bids"
