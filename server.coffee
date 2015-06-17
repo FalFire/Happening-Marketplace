@@ -56,8 +56,9 @@ exports.client_newOffer = (o) !->
 # @param offerID The ID of the offer of which to increment the view count
 ###
 exports.client_viewOffer = (offerID) !->
-    if Db.shared.get 'offers', offerID, 'user' != Plugin.userId()
-        Db.shared.modify 'offers', offerID, 'views', (v) -> (v||0)+1
+    offerOwner = Db.shared.get 'offers', offerID, 'user'
+    if offerOwner != Plugin.userId()
+        Db.shared.modify 'offers', offerID, 'views', (v) -> ((v||0)+1)
 
 
 ###
