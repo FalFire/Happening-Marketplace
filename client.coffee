@@ -348,7 +348,7 @@ renderEditOffer = (offerID) !->
             action: !->
                 Modal.confirm null, "Do you want to permanently delete this offer?", !->
                     Server.sync 'deleteOffer', offerID, ->
-                        Page.back()
+                    Page.back()
 
     Page.setTitle if offerID == "new" then "New offer" else "Edit offer"
     Dom.div !->
@@ -414,7 +414,7 @@ renderEditOffer = (offerID) !->
             if !values.description
                 Modal.show("Please enter a description")
                 return
-            if !values.agreedToRules
+            if rules? && rules != '' && !values.agreedToRules
                 Modal.show("Please confirm you will adhere to the marketplace rules")
                 return
             values.title = Form.smileyToEmoji values.title
@@ -422,10 +422,10 @@ renderEditOffer = (offerID) !->
             values.price = parseInt(values.price)
             if offer
                 Server.sync 'editOffer', offerID, values, !->
-                    Page.back()
+                Page.back()
             else
                 Server.sync 'newOffer', values, !->
-                    Page.back()
+                Page.back()
         , offerID != 'new'
 
 ###
