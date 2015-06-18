@@ -114,7 +114,7 @@ renderOfferBids = (id) !->
                                         Server.sync 'deleteBid', id, bid.get('amount')
                     Dom.span !->
                         Dom.style display: 'inline-block', float: 'right', verticalAlign: 'middle', lineHeight: '40px'
-                        Dom.text bid.get('amount')
+                        Dom.text "\u20AC" + bid.get('amount')
             , (bid) -> -bid.get('amount')
     else
         Dom.section !->
@@ -217,7 +217,7 @@ renderOfferItem = (o) !->
                 Dom.style float: 'right', verticalAlign: 'middle', lineHeight: '30px'
                 if typeof(pic) != 'undefined'
                     Dom.style lineHeight: '60px'
-                Dom.text o.get('price')
+                Dom.text "\u20AC" + o.get('price')
 
 ###
 # Renders view to view a posted offer
@@ -265,7 +265,7 @@ renderViewOffer = (id) !->
                     Dom.style color: 'orange', fontWeight: 'bold'
                     Dom.text 'Reserved'
                 else
-                    Dom.b "Price: "
+                    Dom.b "Price:  \u20AC"
                     Dom.text offer.price
         Dom.div !->
             Dom.style paddingBottom: '5px'
@@ -356,7 +356,7 @@ renderNewOffer = !->
                 Dom.style display: "inline-block", width: "62px", float: "right"
                 Form.input
                     name: "price"
-                    text: "Price"
+                    text: "\u20AC"
                     title: "Price"
 
         # Photos
