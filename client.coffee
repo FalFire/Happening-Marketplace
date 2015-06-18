@@ -20,22 +20,24 @@ Photoview = require 'photoview'
 # Main page rendering function
 ###
 exports.render = !->
-    # Decide which page to render based on current state
+    # If no state, render offers
     pg = Page.state.get()
 
-    # TODO fix page navigation, I seem to have misunderstood the purpose of Page.state and Page.nav
-    if pg.viewPicture
-        renderPhotoView(pg.viewPicture, {del: pg.delpic})
-    else if typeof(pg.offerBids) != 'undefined'
-        renderOfferBids(pg.offerBids)
-    else if typeof(pg.offer) != 'undefined'
-        renderViewOffer(pg.offer)
-    else if pg.page
-        switch pg.page
-            when "editOffer" then renderEditOffer(pg.offerID)
-            else renderOffers()
-    else
-        renderOffers()
+    # Get top of the state stack (grrr...)
+    currentState = 0
+    for i in [0..10]
+        if not pg[i]?
+            if i == 0 then return renderOffers() else break
+        currentState = i
+    current = pg[currentState].split("+")
+
+    switch current[0]
+        when "new" then renderEditOffer("new")
+        when "edit" then renderEditOffer(current[1])
+        when "pic" then renderPhotoView(current[1], {del: true})
+        when "bids" then renderOfferBids(current[1])
+        when "offer" then renderViewOffer(current[1])
+        else renderOffers()
 
 
 ###
@@ -43,7 +45,7 @@ exports.render = !->
 #
 # @param id The ID of the offer of which to render the bids
 ###
-renderOfferBids = (id) !->
+renderOfferBids = (id) ->
     offer = Db.shared.get('offers', id)
     Page.setTitle "Bids on #{offer.title}"
     highestBid = offer.highestBid
@@ -128,7 +130,7 @@ renderOfferBids = (id) !->
 #   del: Whether there should be the option to delete this photo
 #   title: Title of view
 ###
-renderPhotoView = (id, opts) !->
+renderPhotoView = (id, opts) ->
     Page.setTitle(if opts.title then opts.title else "Picture")
     if opts.del == true
         Page.setActions
@@ -156,13 +158,13 @@ renderOffers = ->
     Page.setTitle "Current Offers"
     Page.setFooter
         label: "New Offer"
-        action: !-> Page.nav page: "editOffer", offerID: "new"
+        action: !-> Page.nav "new"
 
     Dom.div !->
         Dom.style textAlign: 'center'
         Dom.h3 "Current Offers"
 
-    if parseInt(Db.shared.get 'maxOfferID') == -1 || Db.shared.get 'offers' == []
+    if parseInt(Db.shared.get 'maxOfferID') == -1 || Db.shared.get 'offers' == {}
         Dom.section !->
             Dom.div !->
                 Dom.style textAlign: "center"
@@ -182,7 +184,7 @@ renderOffers = ->
 #
 # @param o The offer to render in the list of offers
 ###
-renderOfferItem = (o) !->
+renderOfferItem = (o) ->
     Dom.div !->
         offerID = o.get('id')
         if typeof offerID == 'undefined'
@@ -190,7 +192,7 @@ renderOfferItem = (o) !->
         Dom.onTap !->
             if o.get('user') != Plugin.userId()
                 Server.sync 'viewOffer', parseInt(offerID)
-            Page.nav offer: parseInt(offerID)
+            Page.nav "offer+" + offerID
         Dom.style width: '100%'
 
         pic = o.get('images')[0]
@@ -224,7 +226,7 @@ renderOfferItem = (o) !->
 #
 # @param id The ID of the offer to render
 ###
-renderViewOffer = (id) !->
+renderViewOffer = (id) ->
     # Check for non-existing offers
     offer = Db.shared.get 'offers', id
     Page.setTitle "#{offer.title}"
@@ -242,7 +244,7 @@ renderViewOffer = (id) !->
             icon: "edit"
             label: "Edit"
             action: !->
-                Page.nav page: "editOffer", offerID: id
+                Page.nav ["offer+" + id, "edit+" + id]
 
     # Offer details
     Dom.section !->
@@ -283,7 +285,7 @@ renderViewOffer = (id) !->
                             margin: '0px 5px'
                         Dom.prop('src', Photo.url key)
                         Dom.onTap !->
-                            Page.nav viewPicture: key
+                            Page.nav ["offer+" + id, "pic+" + key]
 
         Dom.div !->
             Dom.style textAlign: 'right', fontStyle: 'italic', fontSize: '14px'
@@ -295,7 +297,7 @@ renderViewOffer = (id) !->
         Dom.div !->
             Dom.style marginBottom: '0px', paddingBottom: '0px'
             Dom.onTap !->
-                Page.nav offerBids: offer.id
+                Page.nav ["offer+" + offer.id, "bids+" + offer.id]
             if Plugin.userId() == offer.user
                 Dom.div !->
                     Dom.style verticalAlign: 'middle', lineHeight: '100%', display: 'inline-block', marginRight: '5px'
@@ -334,7 +336,7 @@ renderViewOffer = (id) !->
 ###
 # Renders page for edit offers or creating new ones
 ###
-renderEditOffer = (offerID) !->
+renderEditOffer = (offerID) ->
     # Page setup
     offer = null
     rules = Db.shared.get 'rules'
@@ -347,8 +349,8 @@ renderEditOffer = (offerID) !->
             label: "Delete"
             action: !->
                 Modal.confirm null, "Do you want to permanently delete this offer?", !->
-                    Server.sync 'deleteOffer', offerID, ->
-                    Page.back()
+                    Server.sync 'deleteOffer', offerID
+                    Page.nav("")
 
     Page.setTitle if offerID == "new" then "New offer" else "Edit offer"
     Dom.div !->
@@ -385,7 +387,31 @@ renderEditOffer = (offerID) !->
             renderPhotoPicker()
             pics = Db.shared.get 'submitPictures', Plugin.userId(), "pictures"
             for pic in pics
-                renderPhoto(pic)
+                width = Dom.viewport.get('width')
+                cnt = (0|(width / 100)) || 1
+                boxSize = 0|(width-((cnt+1)*4))/cnt
+
+                Dom.div !->
+                    Dom.style
+                        display: 'inline-block'
+                        margin: '2px'
+                        width: boxSize + 'px'
+                    Dom.div !->
+                        Dom.style
+                            display: 'inline-block'
+                            marginLeft: "5px"
+                            marginRight: "5px"
+                            position: 'relative'
+                            height: boxSize + 'px'
+                            width: boxSize + 'px'
+                            background: "url(#{Photo.url pic}) 50% 50% no-repeat"
+                            backgroundSize: 'cover'
+                        Dom.cls 'photo'
+                        Dom.onTap !->
+                            if offerID == "new"
+                                Page.nav ["new", "pic+" + pic]
+                            else
+                                Page.nav ["offer+" + offerID, "edit+" + offerID, "pic+" + pic]
 
         # Description
         Form.text
@@ -421,17 +447,17 @@ renderEditOffer = (offerID) !->
             values.description = Form.smileyToEmoji values.description
             values.price = parseInt(values.price)
             if offer
-                Server.sync 'editOffer', offerID, values, !->
+                Server.sync 'editOffer', offerID, values
                 Page.back()
             else
-                Server.sync 'newOffer', values, !->
+                Server.sync 'newOffer', values
                 Page.back()
         , offerID != 'new'
 
 ###
 # Renders an image functioning as a photo picker to upload photos
 ###
-renderPhotoPicker = !->
+renderPhotoPicker = ->
     width = Dom.viewport.get('width')
     cnt = (0|(width / 100)) || 1
     boxSize = 0|(width-((cnt+1)*4))/cnt
@@ -451,40 +477,10 @@ renderPhotoPicker = !->
         Dom.onTap !->
             Photo.pick()
 
-
-###
-# Renders a photo with the given key in a small frame
-#
-# @param key The secret key of the photo to render
-###
-renderPhoto = (key) !->
-    width = Dom.viewport.get('width')
-    cnt = (0|(width / 100)) || 1
-    boxSize = 0|(width-((cnt+1)*4))/cnt
-
-    Dom.div !->
-        Dom.style
-            display: 'inline-block'
-            margin: '2px'
-            width: boxSize + 'px'
-        Dom.div !->
-            Dom.style
-                display: 'inline-block'
-                marginLeft: "5px"
-                marginRight: "5px"
-                position: 'relative'
-                height: boxSize + 'px'
-                width: boxSize + 'px'
-                background: "url(#{Photo.url key}) 50% 50% no-repeat"
-                backgroundSize: 'cover'
-            Dom.cls 'photo'
-            Dom.onTap !->
-                Page.nav viewPicture: key, delpic: true
-
 ###
 # Plugin settings page
 ###
-exports.renderSettings = !->
+exports.renderSettings = ->
     Dom.div !->
         Dom.text "You can enter marketplace rules which are visible to users when adding offers. If not left empty, users will be required to indicate they agree with the marketplace rules before they can post an offer."
 
