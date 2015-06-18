@@ -117,10 +117,7 @@ exports.onPhoto = (info) !->
 exports.client_removeSubmitPicture = (key) !->
     Photo.remove key
     pics = Db.shared.get "submitPictures", Plugin.userId(), "pictures"
-    newPics = []
-    for pic in pics
-        if pic != key
-            newPics.push(key)
+    newPics = pics.filter (pic) -> pic != key
     Db.shared.set "submitPictures", Plugin.userId(), "pictures", newPics
 
 
