@@ -32,7 +32,7 @@ exports.render = !->
         renderViewOffer(pg.offer)
     else if pg.page
         switch pg.page
-            when "newOffer" then renderNewOffer()
+            when "editOffer" then renderEditOffer(pg.offerID)
             else renderOffers()
     else
         renderOffers()
@@ -130,9 +130,10 @@ renderOfferBids = (id) !->
 ###
 renderPhotoView = (id, opts) !->
     Page.setTitle "Picture"
-    if opts.del
+    if opts.del == true
         Page.setActions
-            icon: Plugin.resourceUri('icon-trash-48.png')
+            icon: "trash"
+            label: "Delete"
             action: !->
                 Modal.confirm null, tr("Remove photo?"), !->
                     Server.send 'removeSubmitPicture', id
@@ -155,13 +156,13 @@ renderOffers = ->
     Page.setTitle "Current Offers"
     Page.setFooter
         label: "New Offer"
-        action: !-> Page.nav page: "newOffer"
+        action: !-> Page.nav page: "editOffer", offerID: "new"
 
     Dom.div !->
         Dom.style textAlign: 'center'
         Dom.h3 "Current Offers"
 
-    if parseInt(Db.shared.get 'maxOfferID') == -1
+    if parseInt(Db.shared.get 'maxOfferID') == -1 || Db.shared.get 'offers' == []
         Dom.section !->
             Dom.div !->
                 Dom.style textAlign: "center"
@@ -238,11 +239,10 @@ renderViewOffer = (id) !->
     # Allow offer 'owner' and Admins to delete offers
     if offer.user == Plugin.userId() || Plugin.userIsAdmin()
         Page.setActions
-            icon: Plugin.resourceUri('icon-trash-48.png')
+            icon: "edit"
+            label: "Edit"
             action: !->
-                Modal.confirm null, "Do you want to permanently delete this offer?", !->
-                    Server.sync 'deleteOffer', id, ->
-                    Page.back()
+                Page.nav page: "editOffer", offerID: id
 
     # Offer details
     Dom.section !->
@@ -332,14 +332,26 @@ renderViewOffer = (id) !->
 
 
 ###
-# Renders page for creating new offer
+# Renders page for edit offers or creating new ones
 ###
-renderNewOffer = !->
+renderEditOffer = (offerID) !->
     # Page setup
-    Page.setTitle "New offer"
+    offer = null
+    if offerID != "new"
+        offer = Db.shared.get 'offers', offerID
+        Server.sync 'startEditingOffer', offerID
+        Page.setActions
+            icon: "trash"
+            label: "Delete"
+            action: !->
+                Modal.confirm null, "Do you want to permanently delete this offer?", !->
+                    Server.sync 'deleteOffer', offerID, ->
+                        Page.back()
+
+    Page.setTitle if offerID == "new" then "New offer" else "Edit offer"
     Dom.div !->
         Dom.style textAlign: "center"
-        Dom.h3 "New Offer"
+        Dom.h3 if offer then "Edit Offer" else "New Offer"
 
     ### Render input form ###
     Dom.section !->
@@ -349,26 +361,30 @@ renderNewOffer = !->
                 Dom.style display: "inline-block", width: (Dom.viewport.get('width')-120) + 'px'
                 Form.input
                     name: "title"
-                    text: "Title"
+                    text: if offer then offer.title else "Title"
                     title: "Title"
+                    value: if offer then offer.title else ""
             Dom.div !->
                 Dom.style display: "inline-block", width: "62px", float: "right"
                 Form.input
                     name: "price"
                     text: "\u20AC"
                     title: "Price"
+                    value: if offer then offer.price else ""
 
         # Photos
         Dom.div !->
             renderPhotoPicker()
-            Db.shared.iterate 'submitPictures', Plugin.userId(), "pictures", (pic) !->
-                renderPhoto(pic.get())
+            pics = Db.shared.get 'submitPictures', Plugin.userId(), "pictures"
+            for pic in pics
+                renderPhoto(pic)
 
         # Description
         Form.text
             name: "description"
-            text: "Description"
+            text: if offer then offer.description else "Descrption"
             title: "Description"
+            value: if offer then offer.description else ""
 
         Form.setPageSubmit (values) !->
             # Validate input and if successful submit
@@ -381,8 +397,13 @@ renderNewOffer = !->
             values.title = Form.smileyToEmoji values.title
             values.description = Form.smileyToEmoji values.description
             values.price = parseInt(values.price)
-            Server.sync 'newOffer', values, !->
-            Page.back()
+            if offer
+                Server.sync 'editOffer', offerID, values, !->
+                    Page.back()
+            else
+                Server.sync 'newOffer', values, !->
+                    Page.back()
+        , offerID != 'new'
 
 ###
 # Renders an image functioning as a photo picker to upload photos

@@ -33,13 +33,14 @@ exports.client_newOffer = (o) !->
         highestBidBy:   -1
         numBids:        0
         views:          0
+        editing:        false
 
     # Add all submitted images to it and remove them from submitted array
     offer.images = []
-    Db.shared.iterate 'submitPictures', Plugin.userId(), "pictures", (pic) !->
-        offer.images.push(pic.get())
+    pics = Db.shared.get 'submitPictures', Plugin.userId(), "pictures"
+    for pic in pics
+        offer.images.push(pic)
     Db.shared.set 'submitPictures', Plugin.userId(), "pictures", []
-    Db.shared.set 'submitPictures', Plugin.userId(), "numPictures", 0
 
     Db.shared.set "offers", nextID, offer
     log "#{Plugin.userName(offer.user)} added a new offer with ID #{nextID}"
@@ -48,6 +49,46 @@ exports.client_newOffer = (o) !->
         unit: 'offer'
         text: "New offer: #{offer.title}"
         exclude: [Plugin.userId()]
+
+
+###
+# Updates given offer with submitted values
+###
+exports.client_editOffer = (offerID, o) !->
+    offer = Db.shared.get 'offers', offerID
+
+    # Update values when user is authorized
+    if offer.user == Plugin.userId() || Plugin.userIsAdmin()
+        Db.shared.set 'offers', offerID, 'title', o.title
+        Db.shared.set 'offers', offerID, 'price', o.price
+        Db.shared.set 'offers', offerID, 'description', o.description
+
+        images = []
+        pics = Db.shared.get 'submitPictures', Plugin.userId(), "pictures"
+        for pic in pics
+            images.push(pic)
+
+        Db.shared.set 'offers', offerID, 'images', images
+        Db.shared.set 'submitPictures', Plugin.userId(), "pictures", []
+        Db.shared.set 'offers', offerID, 'editing', false
+
+###
+# Called by the client when user starts to edit an offer
+###
+exports.client_startEditingOffer = (offerID) !->
+    # Copy all offer images back to submitPictures array
+    offer = Db.shared.get 'offers', offerID
+    if offer.user == Plugin.userId() || Plugin.userIsAdmin()
+        if offer.hasOwnProperty('editing') && offer.editing == true
+            return
+
+        submitPictures = []
+        for pic in offer.images
+            submitPictures.push(pic)
+        Db.shared.set "submitPictures", Plugin.userId(), "pictures", submitPictures
+
+        Db.shared.set 'offers', offerID, 'editing', true
+
 
 ###
 # Called when a user other than the offer 'owner' clicks on an offer
@@ -65,24 +106,23 @@ exports.client_viewOffer = (offerID) !->
 # Called when a photo is uploaded by the cliet Photo api
 ###
 exports.onPhoto = (info) !->
-    if typeof(Db.shared.get 'submitPictures', Plugin.userId(), "numPictures") == "undefined"
-        Db.shared.set "submitPictures", Plugin.userId(), "numPictures", 0
-        Db.shared.set "submitPictures", Plugin.userId(), "pictures", 0, info.key
-    else
-        nextID = Db.shared.modify "submitPictures", Plugin.userId(), "numPictures", (v) -> v+1
-        Db.shared.set "submitPictures", Plugin.userId(), "pictures", nextID, info.key
+    pics = Db.shared.get "submitPictures", Plugin.userId(), "pictures"
+    pics.push(info.key)
+    Db.shared.set "submitPictures", Plugin.userId(), "pictures", pics
 
 
 ###
-# Removes the picture with the given key
+# Removes the submitting picture with the given key
 ###
 exports.client_removeSubmitPicture = (key) !->
     Photo.remove key
     pics = Db.shared.get "submitPictures", Plugin.userId(), "pictures"
-    for k,v of pics
-        if v == key
-            Db.shared.remove "submitPictures", Plugin.userId(), "pictures", k
-            break
+    newPics = []
+    for pic in pics
+        if pic != key
+            newPics.push(key)
+    Db.shared.set "submitPictures", Plugin.userId(), "pictures", newPics
+
 
 ###
 # Places a bid for the given offer
@@ -168,6 +208,7 @@ exports.client_reserveOffer = (offer, reserve) !->
 # Deletes the given offer
 ###
 exports.client_deleteOffer = (offer) !->
+    log "deleting offer..."
     o = Db.shared.get 'offers', offer
     if Plugin.userId() == o.user
         Db.shared.remove 'offers', offer
