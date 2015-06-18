@@ -5,12 +5,22 @@ Timer = require 'timer'
 Photo = require 'photo'
 {tr} = require 'i18n'
 
-# Setup database of offers and submitted pictures
+###
+# Called when the plugin is installed.
+# Setup database of offers and submitted pictures storage
+###
 exports.onInstall = ->
     log 'Installing database...'
     Db.shared.set 'offers', []
     Db.shared.set 'maxOfferID', -1
     Db.shared.set 'submitPictures', {}
+    Db.shared.set 'rules', ''
+
+###
+# Called when the plugin settings are configured in the client
+###
+exports.onConfig = (config) !->
+    Db.shared.set 'rules', config.rules
 
 ###
 # Add new offer to database

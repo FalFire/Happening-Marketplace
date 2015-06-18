@@ -44,7 +44,6 @@ exports.render = !->
 # @param id The ID of the offer of which to render the bids
 ###
 renderOfferBids = (id) !->
-    ### Bid placing footer ###
     offer = Db.shared.get('offers', id)
     Page.setTitle "Bids on #{offer.title}"
     highestBid = offer.highestBid
@@ -89,7 +88,7 @@ renderOfferBids = (id) !->
                             Dom.style verticalAlign: 'middle', lineHeight: '40px', marginLeft: '6px'
                             Dom.text Plugin.userName(bid.get('user'))
 
-                    # Allow owner of bid to remove it
+                    # Allow owner of bid and owner of offer to remove bid
                     if bid.get('user') == Plugin.userId() || Plugin.userId() == offer.user
                         Dom.div !->
                             Dom.style
@@ -127,9 +126,10 @@ renderOfferBids = (id) !->
 # @param id The key of the photo to render
 # @param opts Object with options:
 #   del: Whether there should be the option to delete this photo
+#   title: Title of view
 ###
 renderPhotoView = (id, opts) !->
-    Page.setTitle "Picture"
+    Page.setTitle(if opts.title then opts.title else "Picture")
     if opts.del == true
         Page.setActions
             icon: "trash"
@@ -171,7 +171,7 @@ renderOffers = ->
         Ui.list !->
             Db.shared.iterate 'offers', (offer) !->
                 Ui.item !->
-                    # Combat some server-side bug that causes a weird object to be added to the database
+                    # Combat some server-side bug that causes a weird object to be added to the database sometimes
                     if typeof(offer.get('title')) != 'undefined'
                         renderOfferItem(offer)
             , (offer) -> 1-parseInt(offer.get('date'))
@@ -337,6 +337,8 @@ renderViewOffer = (id) !->
 renderEditOffer = (offerID) !->
     # Page setup
     offer = null
+    rules = Db.shared.get 'rules'
+
     if offerID != "new"
         offer = Db.shared.get 'offers', offerID
         Server.sync 'startEditingOffer', offerID
@@ -352,6 +354,12 @@ renderEditOffer = (offerID) !->
     Dom.div !->
         Dom.style textAlign: "center"
         Dom.h3 if offer then "Edit Offer" else "New Offer"
+
+    if rules? && rules != ''
+        Dom.section !->
+            Dom.style textAlign: 'center', background: '#FBFFC2'
+            Dom.b "Marketplace rules: "
+            Dom.text rules
 
     ### Render input form ###
     Dom.section !->
@@ -386,6 +394,18 @@ renderEditOffer = (offerID) !->
             title: "Description"
             value: if offer then offer.description else ""
 
+        # If rules are set, require users to agree with them
+        if rules? && rules != ''
+            Dom.div !->
+                Dom.span !->
+                    Dom.style verticalAlign: 'middle', lineHeight: '30px'
+                    Dom.text "I will adhere to the marketplace rules "
+                Form.check
+                    name: 'agreedToRules'
+                    value: false
+                    title: "I agree to the marketplace rules"
+                Dom.last().style verticalAlign: 'middle', display: 'inline-block', float: 'right', lineHeight: '30px'
+
         Form.setPageSubmit (values) !->
             # Validate input and if successful submit
             if !values.title
@@ -393,6 +413,9 @@ renderEditOffer = (offerID) !->
                 return
             if !values.description
                 Modal.show("Please enter a description")
+                return
+            if !values.agreedToRules
+                Modal.show("Please confirm you will adhere to the marketplace rules")
                 return
             values.title = Form.smileyToEmoji values.title
             values.description = Form.smileyToEmoji values.description
@@ -457,3 +480,15 @@ renderPhoto = (key) !->
             Dom.cls 'photo'
             Dom.onTap !->
                 Page.nav viewPicture: key, delpic: true
+
+###
+# Plugin settings page
+###
+exports.renderSettings = !->
+    Dom.div !->
+        Dom.text "You can enter marketplace rules which are visible to users when adding offers. If not left empty, users will be required to indicate they agree with the marketplace rules before they can post an offer."
+
+    Form.text
+        name: 'rules'
+        text: "Marketplace rules"
+        value: Db.shared.get('rules') if Db.shared
