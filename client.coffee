@@ -37,6 +37,7 @@ exports.render = !->
         when "pic" then renderPhotoView(current[1], {del: true})
         when "bids" then renderOfferBids(current[1])
         when "offer" then renderViewOffer(current[1])
+        when "offers" then renderOffers()
         else renderOffers()
 
 
@@ -229,14 +230,15 @@ renderOfferItem = (o) ->
 renderViewOffer = (id) ->
     # Check for non-existing offers
     offer = Db.shared.get 'offers', id
-    Page.setTitle "#{offer.title}"
-    if id == -1 || typeof('offer') == 'undefined'
+    if !offer?
         log id
         Dom.section !->
             Dom.style textAlign: 'center'
             Dom.h3 "Error: Invalid offer"
             Dom.text "This offer does not exist. Maybe it has been deleted?"
         return
+
+    Page.setTitle "#{offer.title}"
 
     # Allow offer 'owner' and Admins to delete offers
     if offer.user == Plugin.userId() || Plugin.userIsAdmin()
@@ -349,8 +351,9 @@ renderEditOffer = (offerID) ->
             label: "Delete"
             action: !->
                 Modal.confirm null, "Do you want to permanently delete this offer?", !->
-                    Server.sync 'deleteOffer', offerID
-                    Page.nav("")
+                    Server.sync 'deleteOffer', offerID, !->
+                        Db.shared.remove 'offers', offer
+                    Page.nav ""
 
     Page.setTitle if offerID == "new" then "New offer" else "Edit offer"
     Dom.div !->

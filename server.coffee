@@ -215,8 +215,9 @@ exports.client_reserveOffer = (offer, reserve) !->
 # Deletes the given offer
 ###
 exports.client_deleteOffer = (offer) !->
-    log "deleting offer..."
     o = Db.shared.get 'offers', offer
+    if !o? then return
+
     if Plugin.userId() == o.user
         Db.shared.remove 'offers', offer
     else if Plugin.userIsAdmin()
