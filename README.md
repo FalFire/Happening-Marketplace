@@ -9,4 +9,4 @@ Install just like any other Happening plugin via the developer console
 
 Known Issues
 -----------------
--Page navigation does not seem to work well
+Deleting offers does not work client-side, though they are deleted server-side
