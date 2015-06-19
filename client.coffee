@@ -277,20 +277,20 @@ renderViewOffer = (id) ->
             Dom.last().style fontFamily: "Roboto", marginBottom: '5px', marginTop: '7px'
         if offer.images.length > 0
             Dom.div !->
-                Dom.style overflowX: 'auto', minHeight: '120px', maxHeight: '120px'
+                Dom.style overflow: 'auto', overflowY: 'hidden', minHeight: '140px', maxHeight: '140px', whiteSpace: 'nowrap'
                 for key in offer.images
                     Dom.img !->
                         Dom.style
                             width: '120px'
                             height: '120px'
                             verticalAlign: 'middle'
-                            margin: '0px 5px'
+                            margin: '3px'
                         Dom.prop('src', Photo.url key)
                         Dom.onTap !->
                             Page.nav ["offer+" + id, "pic+" + key]
 
         Dom.div !->
-            Dom.style textAlign: 'right', fontStyle: 'italic', fontSize: '14px'
+            Dom.style textAlign: 'right', fontStyle: 'italic', fontSize: '14px', marginTop: '5px'
             Dom.text "Views: #{offer.views||0}"
 
 
