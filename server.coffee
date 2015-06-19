@@ -11,16 +11,27 @@ Photo = require 'photo'
 ###
 exports.onInstall = ->
     log 'Installing database...'
-    Db.shared.set 'offers', []
+    Db.shared.set 'offers', {}
     Db.shared.set 'maxOfferID', -1
-    Db.shared.set 'submitPictures', {}
     Db.shared.set 'rules', ''
+
+    # Create uploaded pictures array for all current users
+    Db.shared.set 'submitPictures', {}
+    for id in Plugin.userIds()
+        Db.shared.set 'submitPictures', id, []
 
 ###
 # Called when the plugin settings are configured in the client
 ###
 exports.onConfig = (config) !->
     Db.shared.set 'rules', config.rules
+
+###
+# Called when someone joins the group
+###
+exports.onJoin = (userId, left = false) !->
+    log Plugin.userName(userId), " joined"
+    Db.shared.set 'submitPictures', userId, []
 
 ###
 # Add new offer to database
@@ -47,10 +58,10 @@ exports.client_newOffer = (o) !->
 
     # Add all submitted images to it and remove them from submitted array
     offer.images = []
-    pics = Db.shared.get 'submitPictures', Plugin.userId(), "pictures"
+    pics = Db.shared.get 'submitPictures', Plugin.userId()
     for pic in pics
         offer.images.push(pic)
-    Db.shared.set 'submitPictures', Plugin.userId(), "pictures", []
+    Db.shared.set 'submitPictures', Plugin.userId(), []
 
     Db.shared.set "offers", nextID, offer
     log "#{Plugin.userName(offer.user)} added a new offer with ID #{nextID}"
@@ -74,12 +85,12 @@ exports.client_editOffer = (offerID, o) !->
         Db.shared.set 'offers', offerID, 'description', o.description
 
         images = []
-        pics = Db.shared.get 'submitPictures', Plugin.userId(), "pictures"
+        pics = Db.shared.get 'submitPictures', Plugin.userId()
         for pic in pics
             images.push(pic)
 
         Db.shared.set 'offers', offerID, 'images', images
-        Db.shared.set 'submitPictures', Plugin.userId(), "pictures", []
+        Db.shared.set 'submitPictures', Plugin.userId(), []
         Db.shared.set 'offers', offerID, 'editing', false
 
 ###
@@ -95,7 +106,7 @@ exports.client_startEditingOffer = (offerID) !->
         submitPictures = []
         for pic in offer.images
             submitPictures.push(pic)
-        Db.shared.set "submitPictures", Plugin.userId(), "pictures", submitPictures
+        Db.shared.set "submitPictures", Plugin.userId(), submitPictures
 
         Db.shared.set 'offers', offerID, 'editing', true
 
@@ -116,9 +127,9 @@ exports.client_viewOffer = (offerID) !->
 # Called when a photo is uploaded by the cliet Photo api
 ###
 exports.onPhoto = (info) !->
-    pics = Db.shared.get "submitPictures", Plugin.userId(), "pictures"
+    pics = Db.shared.get "submitPictures", Plugin.userId()
     pics.push(info.key)
-    Db.shared.set "submitPictures", Plugin.userId(), "pictures", pics
+    Db.shared.set "submitPictures", Plugin.userId(), pics
 
 
 ###
@@ -126,9 +137,9 @@ exports.onPhoto = (info) !->
 ###
 exports.client_removeSubmitPicture = (key) !->
     Photo.remove key
-    pics = Db.shared.get "submitPictures", Plugin.userId(), "pictures"
+    pics = Db.shared.get "submitPictures", Plugin.userId()
     newPics = pics.filter (pic) -> pic != key
-    Db.shared.set "submitPictures", Plugin.userId(), "pictures", newPics
+    Db.shared.set "submitPictures", Plugin.userId(), newPics
 
 
 ###

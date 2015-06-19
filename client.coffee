@@ -388,7 +388,7 @@ renderEditOffer = (offerID) ->
         # Photos
         Dom.div !->
             renderPhotoPicker()
-            pics = Db.shared.get 'submitPictures', Plugin.userId(), "pictures"
+            pics = Db.shared.get 'submitPictures', Plugin.userId()
             for pic in pics
                 width = Dom.viewport.get('width')
                 cnt = (0|(width / 100)) || 1
@@ -419,7 +419,7 @@ renderEditOffer = (offerID) ->
         # Description
         Form.text
             name: "description"
-            text: if offer then offer.description else "Descrption"
+            text: if offer then offer.description else "Description"
             title: "Description"
             value: if offer then offer.description else ""
 
