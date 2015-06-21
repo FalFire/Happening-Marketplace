@@ -229,11 +229,15 @@ exports.client_deleteOffer = (offer) !->
     o = Db.shared.get 'offers', offer
     if !o? then return
 
+    # If user is authorised, delete both the offer and its social comments!
     if Plugin.userId() == o.user
         Db.shared.remove 'offers', offer
+        Db.share.remove 'comments', offer
     else if Plugin.userIsAdmin()
+        # Notify owner of offer when removed by admin
         Event.create
             unit: 'removedByAdmin'
             text: "An admin removed your offer #{o.title}"
             include: o.user
         Db.shared.remove 'offers', offer
+        Db.share.remove 'comments', offer
