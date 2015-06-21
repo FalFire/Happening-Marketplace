@@ -53,13 +53,13 @@ renderOfferBids = (id) ->
 
     # Allow bidding for all users except 'owner' of offer
     if Plugin.userId() != offer.user
-        Dom.section !->
-            # If reserved, do not allow placing bids
-            if offer.reserved
-                Dom.div !->
-                    Dom.style fontWeight: 'bold', textAlign: 'center', background: '#FDFD96'
-                    Dom.text "This offer is currently reserved"
-            else
+        # If reserved, do not allow placing bids
+        if offer.reserved
+            Dom.div !->
+                Dom.style fontWeight: 'bold', textAlign: 'center', background: '#FDFD96', padding: '5px 0px', marginBottom: '6px', color: 'orange'
+                Dom.text "This offer is currently reserved"
+        else
+            Dom.section !->
                 Dom.div !->
                     Dom.style textAlign: 'center'
                     Form.input
@@ -73,6 +73,19 @@ renderOfferBids = (id) ->
                             Modal.show "Place a bid higher than #{highestBid}!"
                         else
                             Server.sync 'placeBid', id, bid
+
+    # Allow owner of offer to (un)reserve it
+    else
+        reserved = Db.shared.get 'offers', offer.id, 'reserved'
+        Page.setFooter
+            label: if reserved then "Unreserve offer" else "Reserve Offer"
+            action: !->
+                if reserved
+                    Modal.confirm "Do you want to remove the reservation on this offer?", !->
+                        Server.sync "reserveOffer", id, false
+                else
+                    Modal.confirm "Do you want to reserve this offer for a bidder?", !->
+                        Server.sync "reserveOffer", id, true
 
     # Render actual bids, if any
     if highestBid > 0
@@ -212,10 +225,12 @@ renderOfferItem = (o) ->
             Dom.text o.get('title')
         Dom.span !->
             if o.get('reserved') == true
-                Dom.style float: 'right', verticalAlign: 'middle', color: 'orange', fontWeight: 'bold', lineHeight: '30px'
+                Dom.style float: 'right', verticalAlign: 'middle', fontWeight: 'bold', lineHeight: '30px'
                 if typeof(pic) != 'undefined'
                     Dom.style lineHeight: '60px'
-                Dom.text 'Reserved'
+                Dom.span !->
+                    Dom.style verticalAlign: 'middle', background: '#FDFD96', color: 'orange', borderRadius: '5px', padding: '2px 6px'
+                    Dom.text 'Reserved'
             else
                 Dom.style float: 'right', verticalAlign: 'middle', lineHeight: '30px'
                 if typeof(pic) != 'undefined'
@@ -300,17 +315,7 @@ renderViewOffer = (id) ->
             Dom.style marginBottom: '0px', paddingBottom: '0px'
             Dom.onTap !->
                 Page.nav ["offer+" + offer.id, "bids+" + offer.id]
-            if Plugin.userId() == offer.user
-                Dom.div !->
-                    Dom.style verticalAlign: 'middle', lineHeight: '100%', display: 'inline-block', marginRight: '5px'
-                    if Db.shared.get 'offers', offer.id, 'reserved'
-                        Ui.button "Unreserve", !->
-                            Modal.confirm "Do you want to remove the reservation on this offer?", !->
-                                Server.sync "reserveOffer", id, false
-                    else
-                        Ui.button "Reserve", !->
-                            Modal.confirm "Do you want to reserve this offer for a bidder?", !->
-                                Server.sync "reserveOffer", id, true
+            if Plugin.userId() == offer.user || offer.reserved
                 Dom.div !->
                     Dom.style verticalAlign: 'middle', lineHeight: '100%', display: 'inline-block'
                     Ui.button "View bids"
@@ -428,7 +433,7 @@ renderEditOffer = (offerID) ->
             Dom.div !->
                 Dom.span !->
                     Dom.style verticalAlign: 'middle', lineHeight: '30px'
-                    Dom.text "I will adhere to the marketplace rules "
+                    Dom.text "I will adhere to the rules "
                 Form.check
                     name: 'agreedToRules'
                     value: false
