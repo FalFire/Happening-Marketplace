@@ -37,7 +37,7 @@ exports.render = !->
         when "pic" then renderPhotoView(current[1], {del: true})
         when "bids" then renderOfferBids(current[1])
         when "offer" then renderViewOffer(current[1])
-        when "offers" then renderOffers()
+        when "offers" then renderOffers(current[1])
         else renderOffers()
 
 
@@ -46,7 +46,7 @@ exports.render = !->
 #
 # @param id The ID of the offer of which to render the bids
 ###
-renderOfferBids = (id) ->
+renderOfferBids = (id) !->
     offer = Db.shared.get('offers', id)
     Page.setTitle "Bids on #{offer.title}"
     highestBid = offer.highestBid
@@ -144,7 +144,7 @@ renderOfferBids = (id) ->
 #   del: Whether there should be the option to delete this photo
 #   title: Title of view
 ###
-renderPhotoView = (id, opts) ->
+renderPhotoView = (id, opts) !->
     Page.setTitle(if opts.title then opts.title else "Picture")
     if opts.del == true
         Page.setActions
@@ -168,7 +168,11 @@ renderPhotoView = (id, opts) ->
 ###
 # Renders all current offers
 ###
-renderOffers = ->
+renderOffers = (deleteID) !->
+    if deleteID?
+        log "Offer deleted!"
+        Server.sync 'deleteOffer', deleteID, !->
+            Db.shared.remove 'offers', deleteID
     Page.setTitle "Current Offers"
     Page.setFooter
         label: "New Offer"
@@ -190,7 +194,7 @@ renderOffers = ->
                     # Combat some server-side bug that causes a weird object to be added to the database sometimes
                     if typeof(offer.get('title')) != 'undefined'
                         renderOfferItem(offer)
-            , (offer) -> 1-parseInt(offer.get('date'))
+            , (offer) -> -parseInt(offer.get('date'))
 
 
 ###
@@ -198,7 +202,7 @@ renderOffers = ->
 #
 # @param o The offer to render in the list of offers
 ###
-renderOfferItem = (o) ->
+renderOfferItem = (o) !->
     Dom.div !->
         offerID = o.get('id')
         if typeof offerID == 'undefined'
@@ -242,7 +246,7 @@ renderOfferItem = (o) ->
 #
 # @param id The ID of the offer to render
 ###
-renderViewOffer = (id) ->
+renderViewOffer = (id) !->
     # Check for non-existing offers
     offer = Db.shared.get 'offers', id
     if !offer?
@@ -343,7 +347,7 @@ renderViewOffer = (id) ->
 ###
 # Renders page for edit offers or creating new ones
 ###
-renderEditOffer = (offerID) ->
+renderEditOffer = (offerID) !->
     # Page setup
     offer = null
     rules = Db.shared.get 'rules'
@@ -356,9 +360,7 @@ renderEditOffer = (offerID) ->
             label: "Delete"
             action: !->
                 Modal.confirm null, "Do you want to permanently delete this offer?", !->
-                    Server.sync 'deleteOffer', offerID, !->
-                        Db.shared.remove 'offers', offer
-                    Page.nav ""
+                    Page.nav ["offers+" + offerID]
 
     Page.setTitle if offerID == "new" then "New offer" else "Edit offer"
     Dom.div !->
@@ -465,7 +467,7 @@ renderEditOffer = (offerID) ->
 ###
 # Renders an image functioning as a photo picker to upload photos
 ###
-renderPhotoPicker = ->
+renderPhotoPicker = !->
     width = Dom.viewport.get('width')
     cnt = (0|(width / 100)) || 1
     boxSize = 0|(width-((cnt+1)*4))/cnt
@@ -488,7 +490,7 @@ renderPhotoPicker = ->
 ###
 # Plugin settings page
 ###
-exports.renderSettings = ->
+exports.renderSettings = !->
     Dom.div !->
         Dom.text "You can enter marketplace rules which are visible to users when adding offers. If not left empty, users will be required to indicate they agree with the marketplace rules before they can post an offer."
 
