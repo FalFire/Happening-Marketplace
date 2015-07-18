@@ -59,6 +59,16 @@ exports.render = !->
 
 
 ###
+# Plugin information page
+###
+exports.renderInfo = !->
+    Dom.text "See https://github.com/FalFire/Happening-Marketplace for more info."
+    Dom.br()
+    Dom.br()
+    Dom.text "Copyright (C) 2015 Edward Brinkmann"
+
+
+###
 # Renders the list of bids for the offer with the given id
 #
 # @param id The ID of the offer of which to render the bids
