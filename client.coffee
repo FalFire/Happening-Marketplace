@@ -302,9 +302,9 @@ renderViewOffer = (id) !->
                 Dom.style display: 'inline-block', lineHeight: '40px', verticalAlign: 'middle'
                 Dom.div !->
                     Dom.style display: 'inline-block', lineHeight: '40px', verticalAlign: 'middle'
-                    Ui.avatar Plugin.userAvatar(),
+                    Ui.avatar Plugin.userAvatar(offer.user),
                         onTap: !->
-                            Plugin.userInfo(Plugin.userId())
+                            Plugin.userInfo(offer.user)
                 Dom.span !->
                     Dom.style verticalAlign: 'middle', lineHeight: '40px', marginLeft: '6px'
                     Dom.text Plugin.userName()
