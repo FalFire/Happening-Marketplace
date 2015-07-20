@@ -64,6 +64,7 @@ exports.client_newOffer = (o) !->
         description:    (o.description||"Description")
         price:          (o.price||0)
         user:           Plugin.userId()
+        user_uuid:      Plugin.uuid Plugin.userId()
         date:           currentTime
         reserved:       false
         bids:           []

@@ -307,7 +307,7 @@ renderViewOffer = (id) !->
                             Plugin.userInfo(offer.user)
                 Dom.span !->
                     Dom.style verticalAlign: 'middle', lineHeight: '40px', marginLeft: '6px'
-                    Dom.text Plugin.userName()
+                    Dom.text Plugin.userName(offer.user)
             Dom.span !->
                 Dom.style display: 'inline-block', float: 'right', verticalAlign: 'middle', lineHeight: '40px'
                 if offer.reserved
