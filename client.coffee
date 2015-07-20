@@ -65,7 +65,10 @@ exports.renderInfo = !->
     Dom.text "See https://github.com/FalFire/Happening-Marketplace for more info."
     Dom.br()
     Dom.br()
-    Dom.text "Copyright (C) 2015 Edward Brinkmann"
+    Dom.text "To install this plugin in another group, search in the plugin store for install code 272615bi281743."
+    Dom.br()
+    Dom.br()
+    Dom.text "Made by Edward Brinkmann"
 
 
 ###
